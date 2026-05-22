@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SONGS } from "@/lib/songs";
 import { SongCard } from "@/components/SongCard";
 import { ModeSelect } from "@/components/ModeSelect";
@@ -6,13 +7,21 @@ import { HandFilter } from "@/components/HandFilter";
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-6 px-4 py-10">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-50">
-          Key<span className="text-sky-400">Drop</span>
-        </h1>
-        <p className="text-sm text-zinc-400">
-          Falling-tile piano practice. Pick an input, pick a song, play.
-        </p>
+      <header className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">
+            Key<span className="text-sky-400">Drop</span>
+          </h1>
+          <p className="text-sm text-zinc-400">
+            Falling-tile piano practice. Pick an input, pick a song, play.
+          </p>
+        </div>
+        <Link
+          href="/calibrate"
+          className="shrink-0 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
+        >
+          Calibrate
+        </Link>
       </header>
 
       <section className="flex flex-col gap-2">

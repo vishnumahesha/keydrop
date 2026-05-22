@@ -76,6 +76,7 @@ type GameState = {
   handFilter: HandFilter;
   loopStart: number | null;
   loopEnd: number | null;
+  latencyOffset: number; // seconds; subtracted from press time before judging
 
   score: number;
   streak: number;
@@ -93,6 +94,7 @@ type GameState = {
   setWaitMode: (on: boolean) => void;
   setSpeed: (speed: number) => void;
   setHandFilter: (hand: HandFilter) => void;
+  setLatencyOffset: (seconds: number) => void;
   setLoop: (start: number | null, end: number | null) => void;
   clearLoop: () => void;
   loopReset: (start: number, end: number) => void;
@@ -125,6 +127,7 @@ export const useGame = create<GameState>((set, get) => ({
   handFilter: "both",
   loopStart: null,
   loopEnd: null,
+  latencyOffset: 0,
 
   score: 0,
   streak: 0,
@@ -168,6 +171,7 @@ export const useGame = create<GameState>((set, get) => ({
   setWaitMode: (on) => set({ waitMode: on }),
   setSpeed: (speed) => set({ speed: Math.max(0.1, speed) }),
   setHandFilter: (hand) => set({ handFilter: hand }),
+  setLatencyOffset: (seconds) => set({ latencyOffset: seconds }),
   setLoop: (start, end) => set({ loopStart: start, loopEnd: end }),
   clearLoop: () => set({ loopStart: null, loopEnd: null }),
   loopReset: (start, end) => {
@@ -202,9 +206,11 @@ export const useGame = create<GameState>((set, get) => ({
 
   stop: () => set({ started: false, paused: false, activeKeys: [] }),
 
-  noteOn: (midi, t) => {
+  noteOn: (midi, rawT) => {
     const s = get();
     playNote(midi);
+    // Correct for measured input latency before judging.
+    const t = rawT - s.latencyOffset;
     const active = s.activeKeys.includes(midi)
       ? s.activeKeys
       : [...s.activeKeys, midi];

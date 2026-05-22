@@ -32,11 +32,18 @@ export function GameClient({ songId }: { songId: string }) {
   const speed = useGame((s) => s.speed);
   const setSpeed = useGame((s) => s.setSpeed);
   const setLoop = useGame((s) => s.setLoop);
+  const setLatencyOffset = useGame((s) => s.setLatencyOffset);
   const shiftOctave = useGame((s) => s.shiftOctave);
   const canShift = useGame((s) => s.keyMax - s.keyMin > 12);
 
   useKeyboardInput(true);
   const midi = useMidiInput(mode === "midi");
+
+  // Apply the saved input-latency offset.
+  useEffect(() => {
+    const ms = Number(window.localStorage.getItem("keydrop.latencyMs"));
+    if (!Number.isNaN(ms)) setLatencyOffset(ms / 1000);
+  }, [setLatencyOffset]);
 
   // Load the song, then restore the last-used speed for it.
   useEffect(() => {
