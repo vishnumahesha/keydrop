@@ -7,7 +7,7 @@ import clsx from "clsx";
 const MODES: { id: InputMode; label: string; ready: boolean }[] = [
   { id: "keyboard", label: "Laptop keys", ready: true },
   { id: "touch", label: "Touch", ready: true },
-  { id: "midi", label: "MIDI", ready: false },
+  { id: "midi", label: "MIDI piano", ready: true },
   { id: "mic", label: "Mic", ready: false },
 ];
 

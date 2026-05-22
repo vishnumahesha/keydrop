@@ -6,6 +6,7 @@ import { Clock } from "@/lib/engine/clock";
 import { useGame, accuracy } from "@/store/game";
 import { getSong } from "@/lib/songs";
 import { useKeyboardInput } from "@/lib/input/keyboard";
+import { useMidiInput } from "@/lib/input/midi";
 import { ensureAudio } from "@/lib/audio/synth";
 import { HUD } from "@/components/HUD";
 import { FallingNotes } from "@/components/FallingNotes";
@@ -27,6 +28,7 @@ export function GameClient({ songId }: { songId: string }) {
   const canShift = useGame((s) => s.keyMax - s.keyMin > 12);
 
   useKeyboardInput(true);
+  const midi = useMidiInput(mode === "midi");
 
   useEffect(() => {
     loadSong(getSong(songId));
@@ -84,6 +86,25 @@ export function GameClient({ songId }: { songId: string }) {
           Wait
         </label>
       </header>
+
+      {mode === "midi" && (
+        <div
+          className={
+            "rounded-md px-3 py-1.5 text-xs " +
+            (!midi.supported
+              ? "bg-amber-500/15 text-amber-300"
+              : midi.devices.length
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-zinc-800 text-zinc-400")
+          }
+        >
+          {!midi.supported
+            ? "Web MIDI isn't available in this browser. Use Chrome or Edge."
+            : midi.devices.length
+              ? `Connected: ${midi.devices.join(", ")}`
+              : "No MIDI device detected. Plug one in and grant access."}
+        </div>
+      )}
 
       <HUD />
 
