@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { SONGS } from "@/lib/songs";
-import { SongCard } from "@/components/SongCard";
 import { ModeSelect } from "@/components/ModeSelect";
 import { HandFilter } from "@/components/HandFilter";
+import { Library } from "@/components/Library";
 
 export default function Home() {
   return (
@@ -42,11 +42,7 @@ export default function Home() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
           Songs
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {SONGS.map((song) => (
-            <SongCard key={song.id} song={song} />
-          ))}
-        </div>
+        <Library builtins={SONGS} />
       </section>
     </main>
   );

@@ -9,7 +9,7 @@ const DIFF_COLOR: Record<ChartSong["difficulty"], string> = {
   hard: "bg-rose-500/20 text-rose-300",
 };
 
-export function SongCard({ song }: { song: ChartSong }) {
+export function SongCard({ song, bestScore }: { song: ChartSong; bestScore?: number }) {
   return (
     <Link
       href={`/game/${song.id}`}
@@ -31,6 +31,9 @@ export function SongCard({ song }: { song: ChartSong }) {
       <div className="flex items-center gap-3 text-xs text-zinc-500">
         <span>{song.notes.length} notes</span>
         <span>{song.bpm} BPM</span>
+        {bestScore != null && bestScore > 0 && (
+          <span className="ml-auto text-sky-400">best {bestScore.toLocaleString()}</span>
+        )}
       </div>
     </Link>
   );

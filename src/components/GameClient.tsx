@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock } from "@/lib/engine/clock";
 import { useGame } from "@/store/game";
-import { getSong } from "@/lib/songs";
+import { getSong, SONG_MAP } from "@/lib/songs";
+import { listImported, recordScore } from "@/lib/storage/db";
 import { shouldFreeze } from "@/lib/engine/practice";
 import { useKeyboardInput } from "@/lib/input/keyboard";
 import { useMidiInput } from "@/lib/input/midi";
@@ -45,12 +46,29 @@ export function GameClient({ songId }: { songId: string }) {
     if (!Number.isNaN(ms)) setLatencyOffset(ms / 1000);
   }, [setLatencyOffset]);
 
-  // Load the song, then restore the last-used speed for it.
+  // Load the song (built-in or imported), then restore its last-used speed.
   useEffect(() => {
-    loadSong(getSong(songId));
+    let cancelled = false;
+    const builtin = SONG_MAP[songId];
+    if (builtin) {
+      loadSong(builtin);
+    } else {
+      listImported().then((list) => {
+        if (cancelled) return;
+        loadSong(list.find((s) => s.id === songId) ?? getSong(songId));
+      });
+    }
     const saved = Number(window.localStorage.getItem(`keydrop.speed.${songId}`));
     if (SPEEDS.includes(saved)) setSpeed(saved);
+    return () => {
+      cancelled = true;
+    };
   }, [songId, loadSong, setSpeed]);
+
+  // Persist the best score for this chart when a run finishes.
+  useEffect(() => {
+    if (finished) void recordScore(songId, useGame.getState().score);
+  }, [finished, songId]);
 
   // Persist speed per song and keep the running clock in sync.
   useEffect(() => {
