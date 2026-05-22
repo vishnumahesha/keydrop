@@ -1,6 +1,7 @@
 import { SONGS } from "@/lib/songs";
 import { SongCard } from "@/components/SongCard";
 import { ModeSelect } from "@/components/ModeSelect";
+import { HandFilter } from "@/components/HandFilter";
 
 export default function Home() {
   return (
@@ -19,6 +20,13 @@ export default function Home() {
           Input mode
         </h2>
         <ModeSelect />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Hands
+        </h2>
+        <HandFilter />
       </section>
 
       <section className="flex flex-col gap-3">

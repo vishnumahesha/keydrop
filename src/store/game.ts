@@ -1,13 +1,16 @@
 import { create } from "zustand";
 import type {
   ChartSong,
+  HandFilter,
   InputMode,
   JudgeResult,
   Judgement,
   NoteEvent,
+  NoteStatus,
 } from "@/types/note";
 import { judge, isHittable, hasPassed } from "@/lib/engine/scoring";
 import { chartDuration, midiRange } from "@/lib/engine/chart";
+import { filterByHand, resetStatesInRange } from "@/lib/engine/practice";
 import { playNote, stopNote } from "@/lib/audio/synth";
 
 /** Seconds of fall-in before the first note reaches the hit line. */
@@ -37,10 +40,7 @@ export function computeKeyboard(notes: NoteEvent[]): Keyboard {
   return { keyMin, keyMax, kbBase };
 }
 
-export type NoteStatus = {
-  status: "pending" | "hit" | "missed";
-  result?: JudgeResult;
-};
+export type { NoteStatus };
 
 export type AttemptResult = {
   songId: string;
@@ -72,6 +72,10 @@ type GameState = {
 
   mode: InputMode;
   waitMode: boolean;
+  speed: number;
+  handFilter: HandFilter;
+  loopStart: number | null;
+  loopEnd: number | null;
 
   score: number;
   streak: number;
@@ -87,6 +91,11 @@ type GameState = {
   loadSong: (song: ChartSong) => void;
   setMode: (mode: InputMode) => void;
   setWaitMode: (on: boolean) => void;
+  setSpeed: (speed: number) => void;
+  setHandFilter: (hand: HandFilter) => void;
+  setLoop: (start: number | null, end: number | null) => void;
+  clearLoop: () => void;
+  loopReset: (start: number, end: number) => void;
   shiftOctave: (dir: -1 | 1) => void;
   start: () => void;
   stop: () => void;
@@ -112,6 +121,10 @@ export const useGame = create<GameState>((set, get) => ({
 
   mode: "keyboard",
   waitMode: false,
+  speed: 1,
+  handFilter: "both",
+  loopStart: null,
+  loopEnd: null,
 
   score: 0,
   streak: 0,
@@ -125,7 +138,8 @@ export const useGame = create<GameState>((set, get) => ({
   results: [],
 
   loadSong: (song) => {
-    const notes = song.notes.map((n) => ({ ...n, start: n.start + LEAD_IN }));
+    const filtered = filterByHand(song.notes, get().handFilter);
+    const notes = filtered.map((n) => ({ ...n, start: n.start + LEAD_IN }));
     const kb = computeKeyboard(notes);
     set({
       song,
@@ -152,6 +166,14 @@ export const useGame = create<GameState>((set, get) => ({
 
   setMode: (mode) => set({ mode }),
   setWaitMode: (on) => set({ waitMode: on }),
+  setSpeed: (speed) => set({ speed: Math.max(0.1, speed) }),
+  setHandFilter: (hand) => set({ handFilter: hand }),
+  setLoop: (start, end) => set({ loopStart: start, loopEnd: end }),
+  clearLoop: () => set({ loopStart: null, loopEnd: null }),
+  loopReset: (start, end) => {
+    const s = get();
+    set({ noteStates: resetStatesInRange(s.noteStates, s.notes, start, end) });
+  },
   shiftOctave: (dir) => {
     const s = get();
     const next = Math.max(s.keyMin, Math.min(s.kbBase + dir * 12, s.keyMax - 12));
@@ -272,7 +294,7 @@ export const useGame = create<GameState>((set, get) => ({
       }
     }
 
-    const finished = songTime > s.duration + LEAD_IN;
+    const finished = songTime > s.duration + 1;
     const patch: Partial<GameState> = { songTime };
     if (changed) {
       patch.noteStates = noteStates;

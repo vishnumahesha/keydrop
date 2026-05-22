@@ -2,10 +2,24 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useGame, LEAD_IN, computeKeyboard } from "@/store/game";
 import { twinkle } from "@/lib/songs/twinkle";
 import { canon } from "@/lib/songs/canon";
-import { buildChart } from "@/lib/engine/chart";
+import { buildChart, chartDuration } from "@/lib/engine/chart";
+import { shouldFreeze } from "@/lib/engine/practice";
 import type { ChartSong } from "@/types/note";
 
 const g = () => useGame.getState();
+
+const handedChart: ChartSong = {
+  id: "handed",
+  title: "Handed",
+  bpm: 60,
+  difficulty: "beginner",
+  publicDomain: true,
+  notes: [
+    { midi: 60, start: 0, duration: 0.5, hand: "R" },
+    { midi: 48, start: 1, duration: 0.5, hand: "L" },
+    { midi: 64, start: 2, duration: 0.5, hand: "R" },
+  ],
+};
 
 describe("computeKeyboard", () => {
   it("aligns the range to whole octaves around the chart", () => {
@@ -93,5 +107,52 @@ describe("game store", () => {
     expect(s.noteStates[1].status).toBe("hit");
     expect(s.noteStates[0].status).toBe("pending");
     expect(s.hits).toBe(1);
+  });
+});
+
+describe("hand filter on load", () => {
+  it("filters notes by hand and recomputes duration", () => {
+    g().setHandFilter("right");
+    g().loadSong(handedChart);
+    const notes = g().notes;
+    expect(notes).toHaveLength(2);
+    expect(notes.every((n) => n.midi !== 48)).toBe(true); // the left-hand note is gone
+    expect(g().duration).toBeCloseTo(chartDuration(notes), 5);
+    g().setHandFilter("both"); // reset shared store
+  });
+});
+
+describe("loop wraparound", () => {
+  it("re-arms notes inside the loop and leaves others untouched", () => {
+    g().setHandFilter("both");
+    g().loadSong(twinkle);
+    g().start();
+    const notes = g().notes;
+    // Mark the first three notes hit, then loop-reset a window over note #2 only.
+    useGame.setState({
+      noteStates: notes.map((_, i) =>
+        i < 3 ? { status: "hit" as const, result: "perfect" as const } : { status: "pending" as const },
+      ),
+    });
+    const target = notes[1].start;
+    g().loopReset(target - 0.01, target + 0.01);
+    const states = g().noteStates;
+    expect(states[0].status).toBe("hit");
+    expect(states[1].status).toBe("pending");
+    expect(states[2].status).toBe("hit");
+  });
+});
+
+describe("wait gate via store", () => {
+  it("freezes at the line and clears once the note is played", () => {
+    g().setHandFilter("both");
+    g().loadSong(twinkle);
+    g().start();
+    const n0 = g().notes[0];
+    // Time has reached the first note -> should freeze.
+    expect(shouldFreeze(g().notes, g().noteStates, n0.start)).toBe(true);
+    g().noteOn(n0.midi, n0.start);
+    // Now the note is judged, so the gate releases.
+    expect(shouldFreeze(g().notes, g().noteStates, n0.start)).toBe(false);
   });
 });

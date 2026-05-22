@@ -66,6 +66,12 @@ export class Clock {
     this.frozen = false;
   }
 
+  /** Jump songTime to an absolute value (loop wraparound) without a wall jump. */
+  setTime(t: number): void {
+    this._songTime = t;
+    this.lastWall = performance.now();
+  }
+
   /** Wait-mode gate: hold songTime while keeping the loop alive. */
   freeze(): void {
     this.frozen = true;

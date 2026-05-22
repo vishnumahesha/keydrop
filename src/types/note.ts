@@ -22,6 +22,13 @@ export type ChartSong = {
 
 export type JudgeResult = "perfect" | "great" | "good" | "miss";
 
+export type NoteStatus = {
+  status: "pending" | "hit" | "missed";
+  result?: JudgeResult;
+};
+
+export type HandFilter = "both" | "left" | "right";
+
 export type InputMode = "keyboard" | "touch" | "midi" | "mic";
 
 export type Judgement = {

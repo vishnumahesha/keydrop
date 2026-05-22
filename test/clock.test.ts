@@ -85,6 +85,16 @@ describe("Clock", () => {
     expect(c.songTime).toBe(0);
   });
 
+  it("setTime jumps songTime without a wall jump", () => {
+    const c = new Clock(() => {});
+    c.start();
+    frame(16);
+    c.setTime(5);
+    expect(c.songTime).toBe(5);
+    frame(16);
+    expect(c.songTime).toBeCloseTo(5.016, 5); // continues from the new base
+  });
+
   it("emits ticks with songTime and dt", () => {
     const ticks: Array<{ st: number; dt: number }> = [];
     const c = new Clock((st, dt) => ticks.push({ st, dt }));
