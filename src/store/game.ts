@@ -7,14 +7,35 @@ import type {
   NoteEvent,
 } from "@/types/note";
 import { judge, isHittable, hasPassed } from "@/lib/engine/scoring";
-import { chartDuration } from "@/lib/engine/chart";
+import { chartDuration, midiRange } from "@/lib/engine/chart";
 import { playNote, stopNote } from "@/lib/audio/synth";
 
-/** Phase 1 keyboard is locked to one octave, C4..C5. */
-export const MIN_MIDI = 60;
-export const MAX_MIDI = 72;
 /** Seconds of fall-in before the first note reaches the hit line. */
 export const LEAD_IN = 2.5;
+
+/** Nearest C at or below a midi note. */
+function octaveFloor(m: number): number {
+  return m - (((m % 12) + 12) % 12);
+}
+/** Nearest C at or above a midi note. */
+function octaveCeil(m: number): number {
+  const r = ((m % 12) + 12) % 12;
+  return r === 0 ? m : m + (12 - r);
+}
+
+export type Keyboard = { keyMin: number; keyMax: number; kbBase: number };
+
+/** Derive an octave-aligned keyboard range (>= 1 octave) from a chart. */
+export function computeKeyboard(notes: NoteEvent[]): Keyboard {
+  if (notes.length === 0) return { keyMin: 60, keyMax: 72, kbBase: 60 };
+  const { min, max } = midiRange(notes);
+  const keyMin = octaveFloor(min);
+  let keyMax = octaveCeil(max);
+  if (keyMax - keyMin < 12) keyMax = keyMin + 12;
+  const center = octaveFloor(Math.round((min + max) / 2));
+  const kbBase = Math.max(keyMin, Math.min(center, keyMax - 12));
+  return { keyMin, keyMax, kbBase };
+}
 
 export type NoteStatus = {
   status: "pending" | "hit" | "missed";
@@ -40,6 +61,10 @@ type GameState = {
   noteStates: NoteStatus[];
   duration: number;
 
+  keyMin: number;
+  keyMax: number;
+  kbBase: number;
+
   songTime: number;
   started: boolean;
   paused: boolean;
@@ -62,6 +87,7 @@ type GameState = {
   loadSong: (song: ChartSong) => void;
   setMode: (mode: InputMode) => void;
   setWaitMode: (on: boolean) => void;
+  shiftOctave: (dir: -1 | 1) => void;
   start: () => void;
   stop: () => void;
   noteOn: (midi: number, t: number) => void;
@@ -74,6 +100,10 @@ export const useGame = create<GameState>((set, get) => ({
   notes: [],
   noteStates: [],
   duration: 0,
+
+  keyMin: 60,
+  keyMax: 72,
+  kbBase: 60,
 
   songTime: 0,
   started: false,
@@ -96,11 +126,15 @@ export const useGame = create<GameState>((set, get) => ({
 
   loadSong: (song) => {
     const notes = song.notes.map((n) => ({ ...n, start: n.start + LEAD_IN }));
+    const kb = computeKeyboard(notes);
     set({
       song,
       notes,
       noteStates: notes.map(() => ({ status: "pending" as const })),
       duration: chartDuration(notes),
+      keyMin: kb.keyMin,
+      keyMax: kb.keyMax,
+      kbBase: kb.kbBase,
       songTime: 0,
       started: false,
       paused: false,
@@ -118,6 +152,11 @@ export const useGame = create<GameState>((set, get) => ({
 
   setMode: (mode) => set({ mode }),
   setWaitMode: (on) => set({ waitMode: on }),
+  shiftOctave: (dir) => {
+    const s = get();
+    const next = Math.max(s.keyMin, Math.min(s.kbBase + dir * 12, s.keyMax - 12));
+    if (next !== s.kbBase) set({ kbBase: next });
+  },
 
   start: () => {
     const { song } = get();

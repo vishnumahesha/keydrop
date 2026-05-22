@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useGame, MIN_MIDI, MAX_MIDI, LEAD_IN } from "@/store/game";
+import { useGame, LEAD_IN } from "@/store/game";
 import { isBlackKey } from "@/lib/engine/chart";
 
 const LOOKAHEAD = LEAD_IN; // seconds visible above the hit line
@@ -9,14 +9,14 @@ const TOP_PAD = 8;
 
 type Lane = { center: number; width: number; black: boolean };
 
-/** Precompute per-midi horizontal lanes (fractions of width) matching the piano. */
-function buildLanes(): Map<number, Lane> {
-  const whites: number[] = [];
-  for (let m = MIN_MIDI; m <= MAX_MIDI; m++) if (!isBlackKey(m)) whites.push(m);
-  const w = 1 / whites.length;
+/** Per-midi horizontal lanes (fractions of width) matching the piano range. */
+function buildLanes(keyMin: number, keyMax: number): Map<number, Lane> {
+  let whiteCount = 0;
+  for (let m = keyMin; m <= keyMax; m++) if (!isBlackKey(m)) whiteCount++;
+  const w = 1 / Math.max(1, whiteCount);
   const lanes = new Map<number, Lane>();
   let whiteIdx = 0;
-  for (let m = MIN_MIDI; m <= MAX_MIDI; m++) {
+  for (let m = keyMin; m <= keyMax; m++) {
     if (isBlackKey(m)) {
       lanes.set(m, { center: whiteIdx * w, width: w * 0.6, black: true });
     } else {
@@ -26,8 +26,6 @@ function buildLanes(): Map<number, Lane> {
   }
   return lanes;
 }
-
-const LANES = buildLanes();
 
 export function FallingNotes() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,6 +39,8 @@ export function FallingNotes() {
     let raf = 0;
     let cssW = 0;
     let cssH = 0;
+    let lanes = buildLanes(60, 72);
+    let lanesKey = "60-72";
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -56,7 +56,12 @@ export function FallingNotes() {
     ro.observe(canvas);
 
     const draw = () => {
-      const { notes, noteStates, songTime } = useGame.getState();
+      const { notes, noteStates, songTime, keyMin, keyMax } = useGame.getState();
+      const key = `${keyMin}-${keyMax}`;
+      if (key !== lanesKey) {
+        lanes = buildLanes(keyMin, keyMax);
+        lanesKey = key;
+      }
       const hitY = cssH - 6;
       const pxPerSec = (hitY - TOP_PAD) / LOOKAHEAD;
 
@@ -64,7 +69,6 @@ export function FallingNotes() {
       ctx.fillStyle = "#09090b";
       ctx.fillRect(0, 0, cssW, cssH);
 
-      // hit line + glow
       ctx.save();
       ctx.shadowColor = "#38bdf8";
       ctx.shadowBlur = 16;
@@ -80,7 +84,7 @@ export function FallingNotes() {
         const note = notes[i];
         const dt = note.start - songTime;
         if (dt > LOOKAHEAD || note.start + note.duration < songTime - 0.3) continue;
-        const lane = LANES.get(note.midi);
+        const lane = lanes.get(note.midi);
         if (!lane) continue;
 
         const yHit = hitY - dt * pxPerSec;

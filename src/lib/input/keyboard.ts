@@ -3,26 +3,24 @@
 import { useEffect } from "react";
 import { useGame } from "@/store/game";
 
-/** Computer-keyboard layout for the C4..C5 octave (white: A S D F G H J K, black: W E T Y U). */
-export const KEY_TO_MIDI: Record<string, number> = {
-  a: 60, // C4
-  w: 61, // C#4
-  s: 62, // D4
-  e: 63, // D#4
-  d: 64, // E4
-  f: 65, // F4
-  t: 66, // F#4
-  g: 67, // G4
-  y: 68, // G#4
-  h: 69, // A4
-  u: 70, // A#4
-  j: 71, // B4
-  k: 72, // C5
+/**
+ * Computer-keyboard layout, relative to the current octave base.
+ * White: A S D F G H J K (C D E F G A B C). Black: W E T Y U.
+ * Z / X shift the playable octave down / up.
+ */
+const KEY_TO_OFFSET: Record<string, number> = {
+  a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
 };
 
-export const MIDI_TO_KEY: Record<number, string> = Object.fromEntries(
-  Object.entries(KEY_TO_MIDI).map(([key, midi]) => [midi, key.toUpperCase()]),
-);
+const OFFSET_TO_KEY: Record<number, string> = {
+  0: "A", 1: "W", 2: "S", 3: "E", 4: "D", 5: "F", 6: "T",
+  7: "G", 8: "Y", 9: "H", 10: "U", 11: "J", 12: "K",
+};
+
+/** The computer key for a midi note in the current octave, or null if out of reach. */
+export function keyForMidi(midi: number, kbBase: number): string | null {
+  return OFFSET_TO_KEY[midi - kbBase] ?? null;
+}
 
 /** Side-effect hook: routes physical key presses into the game store. */
 export function useKeyboardInput(enabled: boolean): void {
@@ -31,18 +29,29 @@ export function useKeyboardInput(enabled: boolean): void {
 
     const down = (e: KeyboardEvent) => {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-      const midi = KEY_TO_MIDI[e.key.toLowerCase()];
-      if (midi === undefined) return;
+      const key = e.key.toLowerCase();
+      if (key === "z") {
+        e.preventDefault();
+        useGame.getState().shiftOctave(-1);
+        return;
+      }
+      if (key === "x") {
+        e.preventDefault();
+        useGame.getState().shiftOctave(1);
+        return;
+      }
+      const offset = KEY_TO_OFFSET[key];
+      if (offset === undefined) return;
       e.preventDefault();
-      const { songTime, noteOn } = useGame.getState();
-      noteOn(midi, songTime);
+      const { songTime, kbBase, noteOn } = useGame.getState();
+      noteOn(kbBase + offset, songTime);
     };
 
     const up = (e: KeyboardEvent) => {
-      const midi = KEY_TO_MIDI[e.key.toLowerCase()];
-      if (midi === undefined) return;
-      const { songTime, noteOff } = useGame.getState();
-      noteOff(midi, songTime);
+      const offset = KEY_TO_OFFSET[e.key.toLowerCase()];
+      if (offset === undefined) return;
+      const { songTime, kbBase, noteOff } = useGame.getState();
+      noteOff(kbBase + offset, songTime);
     };
 
     window.addEventListener("keydown", down);

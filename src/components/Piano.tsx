@@ -1,35 +1,40 @@
 "use client";
 
-import { useGame, MIN_MIDI, MAX_MIDI } from "@/store/game";
+import { useGame } from "@/store/game";
 import { isBlackKey, midiToNote } from "@/lib/engine/chart";
-import { MIDI_TO_KEY } from "@/lib/input/keyboard";
+import { keyForMidi } from "@/lib/input/keyboard";
 import clsx from "clsx";
-
-const WHITE: number[] = [];
-const BLACK: { midi: number; afterWhite: number }[] = [];
-for (let m = MIN_MIDI; m <= MAX_MIDI; m++) {
-  if (isBlackKey(m)) {
-    BLACK.push({ midi: m, afterWhite: WHITE.length - 1 });
-  } else {
-    WHITE.push(m);
-  }
-}
 
 export function Piano() {
   const mode = useGame((s) => s.mode);
   const activeKeys = useGame((s) => s.activeKeys);
+  const keyMin = useGame((s) => s.keyMin);
+  const keyMax = useGame((s) => s.keyMax);
+  const kbBase = useGame((s) => s.kbBase);
   const showLetters = mode === "keyboard";
 
-  const press = (midi: number) => useGame.getState().noteOn(midi, useGame.getState().songTime);
-  const release = (midi: number) => useGame.getState().noteOff(midi, useGame.getState().songTime);
+  const press = (midi: number) =>
+    useGame.getState().noteOn(midi, useGame.getState().songTime);
+  const release = (midi: number) =>
+    useGame.getState().noteOff(midi, useGame.getState().songTime);
 
-  const whitePct = 100 / WHITE.length;
+  const white: number[] = [];
+  const black: { midi: number; afterWhite: number }[] = [];
+  for (let m = keyMin; m <= keyMax; m++) {
+    if (isBlackKey(m)) black.push({ midi: m, afterWhite: white.length - 1 });
+    else white.push(m);
+  }
+  const whitePct = 100 / white.length;
 
   return (
-    <div className="w-full select-none px-2 pb-3">
-      <div className="relative mx-auto flex h-40 w-full max-w-2xl touch-none">
-        {WHITE.map((midi) => {
+    <div className="w-full touch-none select-none overflow-x-auto px-2 pb-3">
+      <div
+        className="relative mx-auto flex h-40"
+        style={{ minWidth: `${white.length * 38}px` }}
+      >
+        {white.map((midi) => {
           const active = activeKeys.includes(midi);
+          const letter = keyForMidi(midi, kbBase);
           return (
             <button
               key={midi}
@@ -48,17 +53,16 @@ export function Piano() {
                 active ? "bg-sky-300" : "bg-white hover:bg-sky-50",
               )}
             >
-              {showLetters && (
-                <span className="text-xs font-semibold text-zinc-500">
-                  {MIDI_TO_KEY[midi]}
-                </span>
+              {showLetters && letter && (
+                <span className="text-xs font-semibold text-zinc-500">{letter}</span>
               )}
             </button>
           );
         })}
 
-        {BLACK.map(({ midi, afterWhite }) => {
+        {black.map(({ midi, afterWhite }) => {
           const active = activeKeys.includes(midi);
+          const letter = keyForMidi(midi, kbBase);
           const left = `calc(${(afterWhite + 1) * whitePct}% - ${whitePct * 0.32}%)`;
           return (
             <button
@@ -79,10 +83,8 @@ export function Piano() {
                 active ? "bg-sky-500" : "bg-zinc-900 hover:bg-zinc-700",
               )}
             >
-              {showLetters && (
-                <span className="text-[10px] font-semibold text-zinc-300">
-                  {MIDI_TO_KEY[midi]}
-                </span>
+              {showLetters && letter && (
+                <span className="text-[10px] font-semibold text-zinc-300">{letter}</span>
               )}
             </button>
           );

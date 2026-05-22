@@ -23,6 +23,8 @@ export function GameClient({ songId }: { songId: string }) {
   const mode = useGame((s) => s.mode);
   const waitMode = useGame((s) => s.waitMode);
   const setWaitMode = useGame((s) => s.setWaitMode);
+  const shiftOctave = useGame((s) => s.shiftOctave);
+  const canShift = useGame((s) => s.keyMax - s.keyMin > 12);
 
   useKeyboardInput(true);
 
@@ -108,8 +110,30 @@ export function GameClient({ songId }: { songId: string }) {
             Stop
           </button>
         )}
+        {canShift && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => shiftOctave(-1)}
+              aria-label="Octave down"
+              className="rounded-md bg-zinc-800 px-2 py-2 text-zinc-200 hover:bg-zinc-700"
+            >
+              ◀
+            </button>
+            <button
+              onClick={() => shiftOctave(1)}
+              aria-label="Octave up"
+              className="rounded-md bg-zinc-800 px-2 py-2 text-zinc-200 hover:bg-zinc-700"
+            >
+              ▶
+            </button>
+          </div>
+        )}
         <span className="text-xs text-zinc-500">
-          {mode === "keyboard" ? "Type the letters on the keys" : "Tap the keys"}
+          {mode === "keyboard"
+            ? canShift
+              ? "Type the key letters · Z/X shift octave"
+              : "Type the letters on the keys"
+            : "Tap the keys"}
         </span>
       </div>
 
