@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock } from "@/lib/engine/clock";
 import { useGame } from "@/store/game";
 import { getSong, SONG_MAP } from "@/lib/songs";
 import { listImported, recordScore } from "@/lib/storage/db";
-import { shouldFreeze } from "@/lib/engine/practice";
+import { shouldFreeze, isMonophonic } from "@/lib/engine/practice";
 import { useKeyboardInput } from "@/lib/input/keyboard";
 import { useMidiInput } from "@/lib/input/midi";
+import { useMicInput } from "@/lib/input/mic";
+import { midiToNote } from "@/lib/engine/chart";
 import { ensureAudio } from "@/lib/audio/synth";
 import { HUD } from "@/components/HUD";
 import { FallingNotes } from "@/components/FallingNotes";
@@ -37,8 +39,12 @@ export function GameClient({ songId }: { songId: string }) {
   const shiftOctave = useGame((s) => s.shiftOctave);
   const canShift = useGame((s) => s.keyMax - s.keyMin > 12);
 
+  const notes = useGame((s) => s.notes);
+  const monophonic = useMemo(() => isMonophonic(notes), [notes]);
+
   useKeyboardInput(true);
   const midi = useMidiInput(mode === "midi");
+  const mic = useMicInput(mode === "mic");
 
   // Apply the saved input-latency offset.
   useEffect(() => {
@@ -176,6 +182,32 @@ export function GameClient({ songId }: { songId: string }) {
             : midi.devices.length
               ? `Connected: ${midi.devices.join(", ")}`
               : "No MIDI device detected. Plug one in and grant access."}
+        </div>
+      )}
+
+      {mode === "mic" && (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300">
+          {!mic.supported ? (
+            <span className="text-amber-300">Microphone isn&apos;t available in this browser.</span>
+          ) : !monophonic ? (
+            <span className="text-amber-300">Mic mode is melody-only — this song has chords.</span>
+          ) : mic.calibrating ? (
+            <span>Calibrating room noise… stay quiet for a moment.</span>
+          ) : mic.listening ? (
+            <span className="text-emerald-300">
+              Listening{mic.detectedMidi != null ? ` · heard ${midiToNote(mic.detectedMidi)}` : ""} · melody only
+            </span>
+          ) : (
+            <>
+              <span>Play single notes into the mic.</span>
+              <button
+                onClick={() => mic.enable()}
+                className="rounded bg-sky-500 px-3 py-1 font-semibold text-white hover:bg-sky-400"
+              >
+                Enable mic
+              </button>
+            </>
+          )}
         </div>
       )}
 

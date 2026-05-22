@@ -71,6 +71,16 @@ export function weakSections(
   return sections.slice(0, limit);
 }
 
+/** True when no two notes overlap in time (a single-line melody). */
+export function isMonophonic(notes: NoteEvent[]): boolean {
+  const sorted = [...notes].sort((a, b) => a.start - b.start);
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    if (sorted[i].start < prev.start + prev.duration - 1e-6) return false;
+  }
+  return true;
+}
+
 /** Reset notes whose start falls within [start, end] back to pending (loop wrap). */
 export function resetStatesInRange(
   noteStates: NoteStatus[],

@@ -8,7 +8,7 @@ const MODES: { id: InputMode; label: string; ready: boolean }[] = [
   { id: "keyboard", label: "Laptop keys", ready: true },
   { id: "touch", label: "Touch", ready: true },
   { id: "midi", label: "MIDI piano", ready: true },
-  { id: "mic", label: "Mic", ready: false },
+  { id: "mic", label: "Acoustic (mic)", ready: true },
 ];
 
 export function ModeSelect() {

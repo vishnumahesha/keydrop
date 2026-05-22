@@ -5,6 +5,7 @@ import {
   shouldFreeze,
   resetStatesInRange,
   nextPendingIndex,
+  isMonophonic,
 } from "@/lib/engine/practice";
 import type { NoteEvent, NoteStatus } from "@/types/note";
 
@@ -62,6 +63,19 @@ describe("shouldFreeze (wait gate)", () => {
     const notes = [note(3.5)];
     expect(shouldFreeze(notes, [st("hit")], 3.6)).toBe(false);
     expect(nextPendingIndex([st("hit")])).toBe(-1);
+  });
+});
+
+describe("isMonophonic", () => {
+  it("accepts a single melodic line", () => {
+    expect(isMonophonic([note(0), note(1), note(2)])).toBe(true);
+  });
+  it("rejects overlapping notes (chords)", () => {
+    const chord: NoteEvent[] = [
+      { midi: 60, start: 0, duration: 1 },
+      { midi: 64, start: 0.5, duration: 1 },
+    ];
+    expect(isMonophonic(chord)).toBe(false);
   });
 });
 
