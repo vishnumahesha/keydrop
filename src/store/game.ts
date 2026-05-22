@@ -8,6 +8,7 @@ import type {
 } from "@/types/note";
 import { judge, isHittable, hasPassed } from "@/lib/engine/scoring";
 import { chartDuration } from "@/lib/engine/chart";
+import { playNote, stopNote } from "@/lib/audio/synth";
 
 /** Phase 1 keyboard is locked to one octave, C4..C5. */
 export const MIN_MIDI = 60;
@@ -142,6 +143,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   noteOn: (midi, t) => {
     const s = get();
+    playNote(midi);
     const active = s.activeKeys.includes(midi)
       ? s.activeKeys
       : [...s.activeKeys, midi];
@@ -206,6 +208,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   noteOff: (midi) => {
     const s = get();
+    stopNote(midi);
     if (!s.activeKeys.includes(midi)) return;
     set({ activeKeys: s.activeKeys.filter((m) => m !== midi) });
   },

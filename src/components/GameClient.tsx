@@ -6,6 +6,7 @@ import { Clock } from "@/lib/engine/clock";
 import { useGame, accuracy } from "@/store/game";
 import { getSong } from "@/lib/songs";
 import { useKeyboardInput } from "@/lib/input/keyboard";
+import { ensureAudio } from "@/lib/audio/synth";
 import { HUD } from "@/components/HUD";
 import { FallingNotes } from "@/components/FallingNotes";
 import { Piano } from "@/components/Piano";
@@ -49,6 +50,7 @@ export function GameClient({ songId }: { songId: string }) {
   }, []);
 
   const handleStart = () => {
+    void ensureAudio(); // unlock + load samples on this user gesture
     startGame();
     clockRef.current?.start();
     setRunning(true);
