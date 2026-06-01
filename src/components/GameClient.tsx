@@ -37,7 +37,7 @@ export function GameClient({ songId }: { songId: string }) {
   const setLoop = useGame((s) => s.setLoop);
   const setLatencyOffset = useGame((s) => s.setLatencyOffset);
   const shiftOctave = useGame((s) => s.shiftOctave);
-  const canShift = useGame((s) => s.keyMax - s.keyMin > 12);
+  const canShift = useGame((s) => s.keyMax - s.keyMin > 24);
 
   const notes = useGame((s) => s.notes);
   const monophonic = useMemo(() => isMonophonic(notes), [notes]);
@@ -259,8 +259,8 @@ export function GameClient({ songId }: { songId: string }) {
         <span className="text-xs text-zinc-500">
           {mode === "keyboard"
             ? canShift
-              ? "Type the key letters · Z/X shift octave"
-              : "Type the letters on the keys"
+              ? "Bottom row low · top row high · [ ] shift octave"
+              : "Bottom row low · top row high"
             : "Tap the keys"}
         </span>
       </div>

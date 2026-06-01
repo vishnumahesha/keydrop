@@ -4,25 +4,40 @@ import { useEffect } from "react";
 import { useGame } from "@/store/game";
 
 /**
- * Computer-keyboard layout, relative to the current octave base.
- * White: A S D F G H J K (C D E F G A B C). Black: W E T Y U.
- * Z / X shift the playable octave down / up.
+ * Two-octave piano layout relative to kbBase.
+ *
+ * Bottom row (lower octave, offsets 0–11):
+ *   white  Z  X  C  V  B  N  M   → C D E F G A B
+ *   black  S  D     G  H  J       → C# D# F# G# A#
+ *
+ * Top row (upper octave, offsets 12–23):
+ *   white  Q  W  E  R  T  Y  U   → C D E F G A B (+8va)
+ *   black  2  3     5  6  7       → C# D# F# G# A# (+8va)
+ *
+ * [ / ] shift kbBase for charts wider than 2 octaves.
  */
 const KEY_TO_OFFSET: Record<string, number> = {
-  a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
+  // lower octave
+  z: 0,  s: 1,  x: 2,  d: 3,  c: 4,
+  v: 5,  g: 6,  b: 7,  h: 8,  n: 9,  j: 10, m: 11,
+  // upper octave
+  q: 12, 2: 13, w: 14, 3: 15, e: 16,
+  r: 17, 5: 18, t: 19, 6: 20, y: 21, 7: 22, u: 23,
 };
 
 const OFFSET_TO_KEY: Record<number, string> = {
-  0: "A", 1: "W", 2: "S", 3: "E", 4: "D", 5: "F", 6: "T",
-  7: "G", 8: "Y", 9: "H", 10: "U", 11: "J", 12: "K",
+  0: "Z",  1: "S",  2: "X",  3: "D",  4: "C",
+  5: "V",  6: "G",  7: "B",  8: "H",  9: "N",  10: "J", 11: "M",
+  12: "Q", 13: "2", 14: "W", 15: "3", 16: "E",
+  17: "R", 18: "5", 19: "T", 20: "6", 21: "Y", 22: "7", 23: "U",
 };
 
-/** The computer key for a midi note in the current octave, or null if out of reach. */
+/** The computer key label for a midi note given the current keyboard base, or null. */
 export function keyForMidi(midi: number, kbBase: number): string | null {
   return OFFSET_TO_KEY[midi - kbBase] ?? null;
 }
 
-/** Side-effect hook: routes physical key presses into the game store. */
+/** Routes physical key presses into the game store. */
 export function useKeyboardInput(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
@@ -30,12 +45,12 @@ export function useKeyboardInput(enabled: boolean): void {
     const down = (e: KeyboardEvent) => {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
-      if (key === "z") {
+      if (key === "[") {
         e.preventDefault();
         useGame.getState().shiftOctave(-1);
         return;
       }
-      if (key === "x") {
+      if (key === "]") {
         e.preventDefault();
         useGame.getState().shiftOctave(1);
         return;
